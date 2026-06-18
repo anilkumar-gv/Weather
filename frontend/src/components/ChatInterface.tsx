@@ -87,12 +87,28 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
         }),
       });
 
+      const responseText = await response.text();
+      const contentType = response.headers.get("content-type") ?? "";
+
       if (!response.ok) {
-        const errorData = (await response.json()) as { error?: string };
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        let errorDetail = responseText;
+        try {
+          const errorData = JSON.parse(responseText) as { error?: string };
+          errorDetail = errorData.error || responseText;
+        } catch {
+          // Ignore parse failure and keep raw text.
+        }
+
+        throw new Error(`Chat API error ${response.status}: ${errorDetail}`);
       }
 
-      const data = (await response.json()) as { message: string | object };
+      if (!contentType.includes("application/json")) {
+        throw new Error(
+          `Chat API did not return JSON (content-type: ${contentType || "unknown"}): ${responseText}`
+        );
+      }
+
+      const data = JSON.parse(responseText) as { message: string | object };
 
       let assistantContent: string | object = "";
       let toolName: string | undefined;
