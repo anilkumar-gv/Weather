@@ -110,6 +110,7 @@ async function getLocation(): Promise<LocationData> {
 
   return {
     city: "Unknown",
+    region: "",
     country: "",
     latitude: 0,
     longitude: 0,
