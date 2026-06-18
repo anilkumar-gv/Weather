@@ -44,22 +44,38 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
     localStorage.setItem("chat_messages", JSON.stringify(messages));
   }, [messages]);
 
+  const getChatApiUrl = () => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (backendUrl) {
+      return `${backendUrl.replace(/\/$/, "")}/api/chat`;
+    }
+
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return "http://localhost:4000/api/chat";
+      }
+    }
+
+    return "/api/chat";
+  };
+
   const handleSendMessage = async (userMessage: string) => {
     setError(null);
     setIsLoading(true);
 
-    // Add user message to UI immediately
+    // Add user message to UI immediately and keep the request history in sync.
     const userMsg: Message = {
       role: "user",
       content: userMessage,
       timestamp: Date.now(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
 
     try {
       // Call API
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
-      const apiUrl = `${backendUrl}/api/chat`;
+      const apiUrl = getChatApiUrl();
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -67,7 +83,7 @@ export default function ChatInterface({ onClose }: ChatInterfaceProps) {
         },
         body: JSON.stringify({
           message: userMessage,
-          conversationHistory: messages,
+          conversationHistory: updatedMessages,
         }),
       });
 
