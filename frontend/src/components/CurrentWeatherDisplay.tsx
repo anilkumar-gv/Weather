@@ -7,6 +7,7 @@ import { getCurrentWeatherData } from "@/lib/currentWeather";
 interface CurrentWeatherData {
   location: {
     city: string;
+    region: string;
     country: string;
     latitude: number;
     longitude: number;
@@ -89,7 +90,8 @@ export default function CurrentWeatherDisplay({ className = "", inline = false }
                 Current Location
               </p>
               <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                {weather.location.city}, {weather.location.country}
+                {weather.location.city || weather.location.region || weather.location.country || "Unknown"}
+                {weather.location.country ? `, ${weather.location.country}` : ""}
               </p>
             </div>
           </div>

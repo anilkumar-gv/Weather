@@ -1,5 +1,6 @@
 interface LocationData {
   city: string;
+  region: string;
   country: string;
   latitude: number;
   longitude: number;
@@ -42,40 +43,6 @@ const WEATHER_CODES: Record<number, string> = {
   99: "Thunderstorm with heavy hail",
 };
 
-async function getLocationFromBrowser(): Promise<LocationData> {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("Geolocation is not supported"));
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      reject(new Error("Geolocation timeout"));
-    }, 5000);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        window.clearTimeout(timeoutId);
-        resolve({
-          city: "Your location",
-          country: "",
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-      },
-      (error) => {
-        window.clearTimeout(timeoutId);
-        reject(error);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 5000,
-      },
-    );
-  });
-}
-
 async function getLocationFromIpapi(): Promise<LocationData> {
   const response = await fetch("https://ipapi.co/json/", {
     signal: AbortSignal.timeout(5000),
@@ -92,7 +59,8 @@ async function getLocationFromIpapi(): Promise<LocationData> {
   }
 
   return {
-    city: data.city || "Unknown",
+    city: data.city || data.region || "Unknown",
+    region: data.region || "",
     country: data.country_name || "",
     latitude: data.latitude,
     longitude: data.longitude,
@@ -119,7 +87,8 @@ async function getLocationFromIpWhoIs(): Promise<LocationData> {
   }
 
   return {
-    city: data.city || "Unknown",
+    city: data.city || data.region || "Unknown",
+    region: data.region || "",
     country: data.country || "",
     latitude: data.latitude,
     longitude: data.longitude,
@@ -127,12 +96,6 @@ async function getLocationFromIpWhoIs(): Promise<LocationData> {
 }
 
 async function getLocation(): Promise<LocationData> {
-  try {
-    return await getLocationFromBrowser();
-  } catch (error) {
-    console.warn("Browser geolocation not available, falling back to IP lookup:", error);
-  }
-
   try {
     return await getLocationFromIpapi();
   } catch (error) {
