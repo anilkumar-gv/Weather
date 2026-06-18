@@ -16,8 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description:
-    "A spec-driven learning dashboard showing local time, greetings, and weather.",
+  description: "A dashboard showing local time, greetings, and weather.",
 };
 
 export default function RootLayout({
