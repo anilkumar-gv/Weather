@@ -11,6 +11,7 @@ interface CurrentWeatherData {
     latitude: number;
     longitude: number;
   };
+  timezone: string;
   temperature: number;
   weatherCode: number;
   weatherDescription: string;
@@ -102,7 +103,11 @@ export default function CurrentWeatherDisplay({ className = "", inline = false }
               className="mx-auto"
               timeClassName="text-3xl"
               dateClassName="text-xs"
+              timeZone={weather.timezone}
             />
+            <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
+              Timezone: <span className="font-semibold text-emerald-900 dark:text-emerald-100">{weather.timezone}</span>
+            </p>
           </div>
 
           {/* Weather Info */}

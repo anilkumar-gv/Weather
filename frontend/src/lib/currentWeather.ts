@@ -7,6 +7,7 @@ interface LocationData {
 
 interface CurrentWeatherData {
   location: LocationData;
+  timezone: string;
   temperature: number;
   weatherCode: number;
   weatherDescription: string;
@@ -41,33 +42,38 @@ const WEATHER_CODES: Record<number, string> = {
   99: "Thunderstorm with heavy hail",
 };
 
-async function getLocationFromIP(): Promise<LocationData> {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
-  const apiUrl = `${backendUrl}/api/location`;
-
-  try {
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      throw new Error(`${apiUrl} returned ${response.status}`);
+async function getLocationFromBrowser(): Promise<LocationData> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      reject(new Error("Geolocation is not supported"));
+      return;
     }
 
-    const data = await response.json();
+    const timeoutId = window.setTimeout(() => {
+      reject(new Error("Geolocation timeout"));
+    }, 5000);
 
-    return {
-      city: data.city || "Unknown",
-      country: data.country || "",
-      latitude: data.latitude ?? 0,
-      longitude: data.longitude ?? 0,
-    };
-  } catch (error) {
-    console.warn("Error getting location from local API:/api/location", error);
-    return {
-      city: "Unknown",
-      country: "",
-      latitude: 0,
-      longitude: 0,
-    };
-  }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        window.clearTimeout(timeoutId);
+        resolve({
+          city: "Your location",
+          country: "",
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000,
+      },
+    );
+  });
 }
 
 async function getLocationFromIpapi(): Promise<LocationData> {
@@ -120,6 +126,33 @@ async function getLocationFromIpWhoIs(): Promise<LocationData> {
   };
 }
 
+async function getLocation(): Promise<LocationData> {
+  try {
+    return await getLocationFromBrowser();
+  } catch (error) {
+    console.warn("Browser geolocation not available, falling back to IP lookup:", error);
+  }
+
+  try {
+    return await getLocationFromIpapi();
+  } catch (error) {
+    console.warn("ipapi.co lookup failed, trying ipwho.is:", error);
+  }
+
+  try {
+    return await getLocationFromIpWhoIs();
+  } catch (error) {
+    console.warn("ipwho.is lookup failed:", error);
+  }
+
+  return {
+    city: "Unknown",
+    country: "",
+    latitude: 0,
+    longitude: 0,
+  };
+}
+
 async function getCurrentWeather(
   latitude: number,
   longitude: number
@@ -138,8 +171,10 @@ async function getCurrentWeather(
 
     const data = await response.json();
     const current = data.current;
+    const timezone = data.timezone || "UTC";
 
     return {
+      timezone,
       temperature: Math.round(current.temperature_2m),
       weatherCode: current.weather_code,
       weatherDescription:
@@ -159,7 +194,7 @@ async function getCurrentWeather(
 }
 
 export async function getCurrentWeatherData(): Promise<CurrentWeatherData> {
-  const location = await getLocationFromIP();
+  const location = await getLocation();
   const weather = await getCurrentWeather(location.latitude, location.longitude);
 
   return {
